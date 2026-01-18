@@ -4,6 +4,15 @@ declare(strict_types=1);
 require_once __DIR__ . '/functions.php';
 
 if (session_status() === PHP_SESSION_NONE) {
+    $secure = !empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off';
+    session_set_cookie_params([
+        'lifetime' => 0,
+        'path' => '/',
+        'domain' => '',
+        'secure' => $secure,
+        'httponly' => true,
+        'samesite' => 'Lax',
+    ]);
     session_start();
 }
 
@@ -15,6 +24,13 @@ function currentUser(): ?array
 function requireLogin(string|array|null $roles = null): void
 {
     $user = currentUser();
+    // Idle timeout: 30 minutes inactivity
+    $timeout = 1800;
+    if (isset($_SESSION['last_activity']) && (time() - (int) $_SESSION['last_activity']) > $timeout) {
+        logoutUser();
+    } else {
+        $_SESSION['last_activity'] = time();
+    }
     if (!$user) {
         header('Location: /login.php');
         exit;
@@ -40,11 +56,16 @@ function redirectByRole(string $role): void
 
 function loginUser(array $user): void
 {
+    // Regenerate session ID at privilege change
+    if (session_status() === PHP_SESSION_ACTIVE) {
+        session_regenerate_id(true);
+    }
     $_SESSION['user'] = [
         'id' => (int) $user['id'],
         'username' => $user['username'],
         'role' => $user['role'],
     ];
+    $_SESSION['last_activity'] = time();
 }
 
 function logoutUser(): void
