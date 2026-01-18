@@ -97,7 +97,6 @@ $sales = $pdo->query('SELECT s.*, p.name FROM ' . $tables['sales'] . ' s LEFT JO
             <li class="nav-item"><a class="nav-link text-white" href="/user/user_dashboard.php">Dasbor</a></li>
             <li class="nav-item"><a class="nav-link text-white" href="/user/products.php">Produk</a></li>
             <li class="nav-item"><a class="nav-link text-white active" href="/user/sales.php">Penjualan</a></li>
-            <li class="nav-item"><a class="nav-link text-white" href="/user/expenses.php">Biaya</a></li>
             <li class="nav-item"><a class="nav-link text-white" href="/user/report.php">Laporan</a></li>
             <?php if ($user['role'] === 'admin'): ?>
                 <li class="nav-item"><a class="nav-link text-white" href="/admin/admin_dashboard.php">Panel Admin</a></li>

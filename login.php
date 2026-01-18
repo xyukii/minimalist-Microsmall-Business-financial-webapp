@@ -33,7 +33,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <div class="col-md-6">
                 <div class="card shadow-sm">
                     <div class="card-body p-4">
-                        <h3 class="text-center mb-3">Keuangan Multi-Pengguna</h3>
+                        <h3 class="text-center mb-3">Laporan Sales by Yukii</h3>
                         <?php if ($error): ?>
                             <div class="alert alert-danger" role="alert"><?php echo htmlspecialchars($error, ENT_QUOTES, 'UTF-8'); ?></div>
                         <?php endif; ?>

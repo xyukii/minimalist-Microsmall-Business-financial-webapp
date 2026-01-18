@@ -42,6 +42,46 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
     }
+
+    if ($action === 'edit_user') {
+        $userId = (int) ($_POST['user_id'] ?? 0);
+        $newUsername = trim($_POST['username'] ?? '');
+        $newPassword = $_POST['password'] ?? '';
+        $newRole = $_POST['role'] === 'admin' ? 'admin' : 'user';
+        
+        if (strlen($newUsername) < 3) {
+            $error = 'Username terlalu pendek (minimal 3 karakter).';
+        } else {
+            try {
+                // Check if username already exists for other users
+                $existing = $pdo->prepare('SELECT id FROM users WHERE username = ? AND id != ?');
+                $existing->execute([$newUsername, $userId]);
+                if ($existing->fetch()) {
+                    $error = 'Username sudah digunakan oleh pengguna lain.';
+                } else {
+                    // Update username dan role
+                    $stmt = $pdo->prepare('UPDATE users SET username = ?, role = ? WHERE id = ?');
+                    $stmt->execute([$newUsername, $newRole, $userId]);
+                    
+                    // Update password jika diisi
+                    if (!empty($newPassword)) {
+                        if (strlen($newPassword) < 4) {
+                            $error = 'Kata sandi terlalu pendek (minimal 4 karakter).';
+                        } else {
+                            $hashedPassword = password_hash($newPassword, PASSWORD_DEFAULT);
+                            $stmt = $pdo->prepare('UPDATE users SET password = ? WHERE id = ?');
+                            $stmt->execute([$hashedPassword, $userId]);
+                            $message = 'Pengguna berhasil diupdate beserta kata sandi baru.';
+                        }
+                    } else {
+                        $message = 'Pengguna berhasil diupdate.';
+                    }
+                }
+            } catch (Throwable $e) {
+                $error = 'Gagal mengupdate pengguna: ' . $e->getMessage();
+            }
+        }
+    }
 }
 
 $users = $pdo->query('SELECT id, username, role, created_at FROM users ORDER BY created_at DESC')->fetchAll();
@@ -142,6 +182,8 @@ $stats = [
                                     <td><span class="badge bg-secondary"><?php echo htmlspecialchars($u['role'], ENT_QUOTES, 'UTF-8'); ?></span></td>
                                     <td><?php echo htmlspecialchars($u['created_at'], ENT_QUOTES, 'UTF-8'); ?></td>
                                     <td>
+                                        <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#editUserModal" 
+                                            onclick="loadUserData(<?php echo (int) $u['id']; ?>, '<?php echo htmlspecialchars($u['username'], ENT_QUOTES, 'UTF-8'); ?>', '<?php echo htmlspecialchars($u['role'], ENT_QUOTES, 'UTF-8'); ?>')">Ubah</button>
                                         <form method="post" class="d-inline" onsubmit="return confirm('Hapus pengguna beserta semua tabelnya?');">
                                             <input type="hidden" name="action" value="delete_user">
                                             <input type="hidden" name="user_id" value="<?php echo (int) $u['id']; ?>">
@@ -158,5 +200,55 @@ $stats = [
         </main>
     </div>
 </div>
+
+<!-- Modal Edit User -->
+<div class="modal fade" id="editUserModal" tabindex="-1" aria-labelledby="editUserModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="editUserModalLabel">Edit Pengguna</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="post">
+                <div class="modal-body">
+                    <input type="hidden" name="action" value="edit_user">
+                    <input type="hidden" name="user_id" id="editUserId">
+                    
+                    <div class="mb-3">
+                        <label for="editUsername" class="form-label">Username</label>
+                        <input type="text" class="form-control" id="editUsername" name="username" required minlength="3">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="editPassword" class="form-label">Kata Sandi Baru (Kosongkan jika tidak ingin mengubah)</label>
+                        <input type="password" class="form-control" id="editPassword" name="password" minlength="4">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="editRole" class="form-label">Peran</label>
+                        <select class="form-select" id="editRole" name="role" required>
+                            <option value="user">Pengguna</option>
+                            <option value="admin">Admin</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-primary">Simpan Perubahan</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+function loadUserData(userId, username, role) {
+    document.getElementById('editUserId').value = userId;
+    document.getElementById('editUsername').value = username;
+    document.getElementById('editRole').value = role;
+    document.getElementById('editPassword').value = '';
+}
+</script>
 </body>
 </html>
